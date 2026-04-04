@@ -138,7 +138,7 @@ async def cmd_level(message: Message) -> None:
 @router.message(Command("help"))
 async def cmd_help(message: Message) -> None:
     await message.answer(
-        "🤖 *Language Tutor Bot*\n\n"
+        "🤖 *Voxara Bot*\n\n"
         "Just send me a message in the language you're learning and I'll chat with you and correct your mistakes\\.\n\n"
         "*Commands:*\n"
         "/start — Set up your profile\n"

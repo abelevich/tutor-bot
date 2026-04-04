@@ -1,5 +1,5 @@
 [project]
-name = "language-tutor-bot"
+name = "voxara-bot"
 version = "0.1.0"
 description = "Multilingual language tutor Telegram bot powered by Claude"
 requires-python = ">=3.11"
