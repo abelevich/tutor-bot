@@ -1,4 +1,4 @@
-# Language Tutor Bot
+# Voxara Bot
 
 A multilingual language tutor Telegram bot powered by Claude. Currently supports English, with an architecture designed to easily add more languages.
 
