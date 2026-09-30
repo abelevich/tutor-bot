@@ -69,7 +69,7 @@ async def handle_text_message(
             db_user, language_config, conversation.id, user_text  # type: ignore[arg-type]
         )
     except Exception:
-        logger.exception("Error calling Claude API")
+        logger.exception("Error calling LLM API")
         await message.answer(
             "Sorry, I'm having trouble right now. Please try again in a moment."
         )

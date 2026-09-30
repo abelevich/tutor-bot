@@ -1,12 +1,13 @@
 [project]
 name = "voxara-bot"
 version = "0.1.0"
-description = "Multilingual language tutor Telegram bot powered by Claude"
+description = "Multilingual language tutor Telegram bot powered by any LLM (via LiteLLM)"
 requires-python = ">=3.11"
 license = "MIT"
 dependencies = [
     "aiogram>=3.10",
-    "anthropic>=0.40",
+    "litellm>=1.50",
+    "python-dotenv>=1.0",
     "aiosqlite>=0.20",
     "pydantic-settings>=2.0",
     "aiohttp>=3.10",
