@@ -76,9 +76,11 @@ credentials-file: /Users/YOU/.cloudflared/<UUID>.json  # printed by `tunnel crea
 
 ingress:
   - hostname: bot.your-domain.com
-    service: http://localhost:8443
+    service: http://127.0.0.1:8443
   - service: http_status:404
 ```
+
+Use `127.0.0.1`, not `localhost`: the bot listens on IPv4 only, and `localhost` can resolve to `::1` first.
 
 Smoke-test in the foreground: `cloudflared tunnel run voxara`.
 
@@ -95,25 +97,40 @@ DATABASE_PATH=/absolute/path/to/voxara-bot/data/tutor.db
 
 Set a real `TELEGRAM_WEBHOOK_SECRET`; if empty, forged webhook requests won't be rejected. Use an absolute `DATABASE_PATH` so it works regardless of the process's working directory.
 
-Start the bot: `python -m src.main`. It binds to `127.0.0.1:8443` (only reachable via the local tunnel) and registers the webhook with Telegram on startup.
+Install into a virtualenv with Python 3.11+ (the macOS system `python3` is too old):
+
+```bash
+brew install python@3.12
+python3.12 -m venv .venv
+.venv/bin/pip install -e .
+```
+
+Start the bot: `.venv/bin/python -m src.main`. It binds to `127.0.0.1:8443` (only reachable via the local tunnel) and registers the webhook with Telegram on startup.
+
+Don't run a polling instance with the same bot token anywhere else (e.g. on your laptop): polling mode calls `deleteWebhook` on startup and silently disconnects production. Use a separate BotFather bot for local development.
 
 ### 4. Verify
 
 ```bash
-# Cloudflare terminates TLS and reaches the bot; expect 401/403 (missing secret token)
-curl -i https://bot.your-domain.com/webhook
+# Cloudflare terminates TLS and reaches the bot; expect 401 Unauthorized (no secret header).
+# The route is POST-only, so a plain GET returns 405.
+curl -i -X POST https://bot.your-domain.com/webhook
 
-# Telegram's view — url should match, last_error_date should be empty
+# Telegram's view — url should match, last_error_message should be absent
 curl "https://api.telegram.org/bot<TOKEN>/getWebhookInfo"
 ```
 
-### 5. Auto-start on boot (macOS)
+If `getWebhookInfo` reports `403 Forbidden`, Cloudflare is likely challenging Telegram's requests: disable **Bot Fight Mode** (Security → Bots) for the zone.
 
-Install cloudflared as a system service:
+### 5. Auto-start (macOS)
+
+Install cloudflared as a launch agent for your user (it reads `~/.cloudflared/config.yml`):
 
 ```bash
-sudo cloudflared service install
+cloudflared service install
 ```
+
+Launch agents start when your user logs in, not at boot. On a headless Mac mini, enable **System Settings → Users & Groups → Automatically log in as** (requires FileVault to be off) so both the tunnel and the bot come back after a reboot or power loss.
 
 Create `~/Library/LaunchAgents/app.voxara.bot.plist` for the bot itself (adjust paths):
 
@@ -138,7 +155,7 @@ Create `~/Library/LaunchAgents/app.voxara.bot.plist` for the bot itself (adjust 
 </plist>
 ```
 
-Load: `launchctl load -w ~/Library/LaunchAgents/app.voxara.bot.plist`. The bot will restart on crash and start at login.
+Load: `launchctl load -w ~/Library/LaunchAgents/app.voxara.bot.plist`. The bot will restart on crash and start at login. The `.env` file is picked up from `WorkingDirectory`.
 
 ## Architecture
 
