@@ -61,10 +61,10 @@ async def run_webhook(bot: Bot, dp: Dispatcher) -> None:
 
     runner = web.AppRunner(app)
     await runner.setup()
-    site = web.TCPSite(runner, host="0.0.0.0", port=8443)
+    site = web.TCPSite(runner, host="127.0.0.1", port=8443)
     await site.start()
 
-    logger.info("Webhook server started on 0.0.0.0:8443")
+    logger.info("Webhook server started on 127.0.0.1:8443")
 
     # Keep running
     try:

@@ -44,6 +44,102 @@ python -m src.main
 BOT_MODE=webhook TELEGRAM_WEBHOOK_URL=https://your-domain.com/webhook python -m src.main
 ```
 
+## Webhook via Cloudflare Tunnel (production)
+
+Recommended production setup when hosting on a machine without a public IP (e.g. a home Mac mini). [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) opens an outbound connection to Cloudflare and routes inbound HTTPS traffic for your domain to a local port. No port forwarding, dynamic-DNS, or manual TLS certificates.
+
+Prerequisites: a domain on Cloudflare (DNS managed by Cloudflare).
+
+### 1. Install and register cloudflared
+
+```bash
+# macOS
+brew install cloudflared
+
+# authenticate; opens browser, pick your zone
+cloudflared tunnel login
+
+# create a named tunnel
+cloudflared tunnel create voxara
+
+# create the public DNS record: bot.your-domain.com -> tunnel
+cloudflared tunnel route dns voxara bot.your-domain.com
+```
+
+### 2. Configure the tunnel
+
+Create `~/.cloudflared/config.yml`:
+
+```yaml
+tunnel: voxara
+credentials-file: /Users/YOU/.cloudflared/<UUID>.json  # printed by `tunnel create`
+
+ingress:
+  - hostname: bot.your-domain.com
+    service: http://localhost:8443
+  - service: http_status:404
+```
+
+Smoke-test in the foreground: `cloudflared tunnel run voxara`.
+
+### 3. Configure the bot
+
+In `.env`:
+
+```dotenv
+BOT_MODE=webhook
+TELEGRAM_WEBHOOK_URL=https://bot.your-domain.com/webhook
+TELEGRAM_WEBHOOK_SECRET=<openssl rand -hex 32>
+DATABASE_PATH=/absolute/path/to/voxara-bot/data/tutor.db
+```
+
+Set a real `TELEGRAM_WEBHOOK_SECRET`; if empty, forged webhook requests won't be rejected. Use an absolute `DATABASE_PATH` so it works regardless of the process's working directory.
+
+Start the bot: `python -m src.main`. It binds to `127.0.0.1:8443` (only reachable via the local tunnel) and registers the webhook with Telegram on startup.
+
+### 4. Verify
+
+```bash
+# Cloudflare terminates TLS and reaches the bot; expect 401/403 (missing secret token)
+curl -i https://bot.your-domain.com/webhook
+
+# Telegram's view — url should match, last_error_date should be empty
+curl "https://api.telegram.org/bot<TOKEN>/getWebhookInfo"
+```
+
+### 5. Auto-start on boot (macOS)
+
+Install cloudflared as a system service:
+
+```bash
+sudo cloudflared service install
+```
+
+Create `~/Library/LaunchAgents/app.voxara.bot.plist` for the bot itself (adjust paths):
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>app.voxara.bot</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/YOU/voxara-bot/.venv/bin/python</string>
+    <string>-m</string>
+    <string>src.main</string>
+  </array>
+  <key>WorkingDirectory</key><string>/Users/YOU/voxara-bot</string>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>StandardOutPath</key><string>/Users/YOU/Library/Logs/voxara.out.log</string>
+  <key>StandardErrorPath</key><string>/Users/YOU/Library/Logs/voxara.err.log</string>
+</dict>
+</plist>
+```
+
+Load: `launchctl load -w ~/Library/LaunchAgents/app.voxara.bot.plist`. The bot will restart on crash and start at login.
+
 ## Architecture
 
 ### Language registry
