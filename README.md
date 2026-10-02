@@ -1,6 +1,6 @@
 # Voxara Bot
 
-A multilingual language tutor Telegram bot powered by Claude. Currently supports English, with an architecture designed to easily add more languages.
+A multilingual language tutor Telegram bot powered by any LLM (Claude by default, via [LiteLLM](https://docs.litellm.ai/)). Currently supports English, with an architecture designed to easily add more languages.
 
 ## How it works
 
@@ -15,9 +15,19 @@ Send the bot a message in the language you're learning. It will:
 
 Talk to [@BotFather](https://t.me/BotFather) on Telegram and create a new bot. Save the token.
 
-### 2. Get an Anthropic API key
+### 2. Pick a model and get an API key
 
-Sign up at [console.anthropic.com](https://console.anthropic.com) and create an API key.
+The bot talks to models through [LiteLLM](https://docs.litellm.ai/docs/providers), so any supported provider works. Set `LLM_MODEL` to `<provider>/<model>` and set that provider's API key:
+
+| Provider | `LLM_MODEL` example | Key variable |
+|----------|---------------------|--------------|
+| Anthropic (default) | `anthropic/claude-sonnet-5-5` | `ANTHROPIC_API_KEY` |
+| OpenAI | `openai/gpt-5` | `OPENAI_API_KEY` |
+| Google Gemini | `gemini/gemini-2.5-pro` | `GEMINI_API_KEY` |
+| OpenRouter | `openrouter/<model>` | `OPENROUTER_API_KEY` |
+| Ollama (local) | `ollama/llama3` | — (set `LLM_API_BASE=http://localhost:11434`) |
+
+The tutor relies on the model following the `<reply>` / `<correction>` output format from the system prompt. Strong models do this reliably; with small or local models, check that corrections still show up.
 
 ### 3. Configure environment
 
@@ -25,6 +35,7 @@ Sign up at [console.anthropic.com](https://console.anthropic.com) and create an 
 cp .env.example .env
 # Edit .env with your tokens:
 #   TELEGRAM_BOT_TOKEN=your-bot-token
+#   LLM_MODEL=anthropic/claude-sonnet-5-5
 #   ANTHROPIC_API_KEY=sk-ant-...
 ```
 
@@ -101,7 +112,11 @@ No other changes needed — the bot, prompts, DB, and handlers all work with any
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `TELEGRAM_BOT_TOKEN` | Telegram bot token (required) | — |
-| `ANTHROPIC_API_KEY` | Anthropic API key (required) | — |
+| `LLM_MODEL` | LiteLLM model string, `<provider>/<model>` | `anthropic/claude-sonnet-5-5` |
+| `LLM_MAX_TOKENS` | Max tokens per tutor reply | `1024` |
+| `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, ... | API key for the provider in `LLM_MODEL` (required, except for local models) | — |
+| `LLM_API_KEY` | Optional explicit API key override | — |
+| `LLM_API_BASE` | Optional custom endpoint (Ollama, vLLM, proxies) | — |
 | `BOT_MODE` | `polling` or `webhook` | `polling` |
 | `TELEGRAM_WEBHOOK_URL` | Webhook URL (required for webhook mode) | — |
 | `TELEGRAM_WEBHOOK_SECRET` | Webhook secret | — |

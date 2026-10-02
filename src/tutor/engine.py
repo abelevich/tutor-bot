@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import anthropic
+import litellm
 
 from src.config import settings
 from src.db.models import User
@@ -14,20 +14,19 @@ async def get_tutor_response(
     conversation_id: int,
     user_text: str,
 ) -> str:
-    """Call Claude API and return the raw response text."""
+    """Call the configured LLM via LiteLLM and return the raw response text."""
     system_prompt, messages = await build_context(
         user, language_config, conversation_id
     )
 
     messages.append({"role": "user", "content": user_text})
 
-    client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
-
-    response = await client.messages.create(
-        model="claude-sonnet-4-20250514",
-        max_tokens=1024,
-        system=system_prompt,
-        messages=messages,  # type: ignore[arg-type]
+    response = await litellm.acompletion(
+        model=settings.llm_model,
+        max_tokens=settings.llm_max_tokens,
+        messages=[{"role": "system", "content": system_prompt}, *messages],
+        api_key=settings.llm_api_key or None,
+        api_base=settings.llm_api_base or None,
     )
 
-    return response.content[0].text  # type: ignore[union-attr]
+    return response.choices[0].message.content or ""  # type: ignore[union-attr]

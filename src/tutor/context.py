@@ -17,7 +17,7 @@ async def build_context(
     language_config: LanguageConfig,
     conversation_id: int,
 ) -> tuple[str, list[dict[str, str]]]:
-    """Build system prompt and message history for the Anthropic API.
+    """Build system prompt and message history for the LLM.
 
     Returns:
         (system_prompt, messages) where messages is a list of
